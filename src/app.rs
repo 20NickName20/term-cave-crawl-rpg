@@ -26,7 +26,7 @@ impl<T> App<T> {
         let Ok(event) = event::read() else {return Ok(());};
 
         if let Event::Key(key) = event {
-            if key.is_press() && key.modifiers == KeyModifiers::CONTROL && key.code == KeyCode::Char('c') {
+            if key.is_press() && key.modifiers == KeyModifiers::CONTROL && (key.code == KeyCode::Char('c') || key.code == KeyCode::Char('q')) {
                 self.exit();
             }
         }
@@ -77,4 +77,22 @@ impl<T> App<T> {
 
         result
     }
+}
+
+pub fn log(msg: String) -> Result<(), String> {
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/something.log")
+        .map_err(|e| format!("failed to open log file: {}", e))?;
+
+    let now = std::time::SystemTime::now();
+    let ts = match now.duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => d.as_secs(),
+        Err(_) => 0,
+    };
+
+    let line = format!("[{}] {}\n", ts, msg);
+    std::io::Write::write_all(&mut file, line.as_bytes()).map_err(|e| format!("failed to write log: {}", e))?;
+    Ok(())
 }

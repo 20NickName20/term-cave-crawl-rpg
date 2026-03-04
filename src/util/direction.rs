@@ -1,6 +1,6 @@
-use crate::util::vec2::Vec2;
+use crate::util::vec2::{Vec2, Vec2i};
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     #[default]
     Right,
@@ -10,7 +10,7 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn to_vec2(&self) -> Vec2 {
+    pub fn to_vec2(&self) -> Vec2i {
         match self {
             Self::Right => Vec2::right(),
             Self::Left => Vec2::left(),

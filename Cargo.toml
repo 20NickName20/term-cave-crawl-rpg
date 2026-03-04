@@ -2,6 +2,7 @@
 name = "term-cave-crawl-rpg"
 version = "0.1.0"
 edition = "2024"
+authors = ["20_NickName_20"]
 
 [dependencies]
 crossterm = "0.29.0"

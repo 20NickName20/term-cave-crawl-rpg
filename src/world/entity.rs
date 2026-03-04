@@ -1,18 +1,19 @@
 use crossterm::style::{StyledContent, Stylize};
 
-use crate::{util::{direction::Direction, vec2::Vec2}, world::map::Map};
+use crate::{util::{direction::Direction, vec2::Vec2u}, world::map::Map};
 
 pub struct Entity {
     id: u32,
-    pub pos: Vec2,
+    pub pos: Vec2u,
     pub data: EntityData
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq)]
 pub enum Action {
     #[default]
     Idle,
     Move(Direction),
+    UseWarpTile,
     Attack(Direction),
     Interact(Direction)
 }
@@ -35,7 +36,7 @@ pub enum EntityData {
 }
 
 impl Entity {
-    pub fn new(id: u32, pos: Vec2, data: EntityData) -> Entity {
+    pub fn new(id: u32, pos: Vec2u, data: EntityData) -> Entity {
         return Entity { id, pos, data }
     }
 
@@ -53,12 +54,12 @@ impl Entity {
 }
 
 pub trait EntityBehavior {
-    fn think(&self, pos: &Vec2, map: &Map) -> Action;
+    fn think(&self, pos: &Vec2u, map: &Map) -> Action;
     fn update(&mut self, action: Action);
 }
 
 impl EntityBehavior for LivingData {
-    fn think(&self, pos: &Vec2, map: &Map) -> Action {
+    fn think(&self, pos: &Vec2u, map: &Map) -> Action {
         self.action
     }
 
@@ -75,7 +76,7 @@ impl LivingData {
 }
 
 impl EntityData {
-    pub fn think(&self, pos: &Vec2, map: &Map) -> Action {
+    pub fn think(&self, pos: &Vec2u, map: &Map) -> Action {
         match self {
             EntityData::Player(living) => {
                 // player-specific pre logic (if needed)
