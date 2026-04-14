@@ -31,7 +31,6 @@ where
 {}
 
 impl<T> Vec2<T> {
-    /// simple constructor, no arithmetic required
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
@@ -92,17 +91,11 @@ impl From<Vec2u> for Vec2i {
     }
 }
 
-impl std::convert::TryFrom<Vec2i> for Vec2u {
-    type Error = &'static str;
-
-    fn try_from(v: Vec2i) -> Result<Self, Self::Error> {
-        if v.x < 0 || v.y < 0 {
-            return Err("negative component cannot be converted to u16");
-        }
-        if v.x > u16::MAX as i32 || v.y > u16::MAX as i32 {
-            return Err("component overflow when converting to u16");
-        }
-        Ok(Vec2u { x: v.x as u16, y: v.y as u16 })
+impl From<Vec2i> for Vec2u {
+    fn from(v: Vec2i) -> Self {
+        let x = v.x.clamp(0, u16::MAX as i32) as u16;
+        let y = v.y.clamp(0, u16::MAX as i32) as u16;
+        Vec2u { x, y }
     }
 }
 

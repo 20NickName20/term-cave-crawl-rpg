@@ -1,37 +1,34 @@
-use std::{collections::HashMap};
-use crate::{util::vec2::{Vec2i, Vec2u}, world::{entity::{Action, Entity, EntityData}, generation::MapType, world::{TargetInfo, WorldAction}}};
+use std::collections::{HashMap, HashSet};
+
+use crate::{util::vec2::{Vec2, Vec2i, Vec2u}, world::{entity::{Action, Entity, EntityData}, world::{TargetInfo, WorldAction}}};
 
 use super::tile::Tile;
 
 pub struct Map {
     width: u16,
     height: u16,
-    level: i32,  
-    gen_type: MapType,
-    unlinked_warps: HashMap<Vec2u, i32>,
+    warps: HashMap<Vec2u, TargetInfo>,
+    free_warps_to_next: HashSet<Vec2u>,
     tiles: Vec<Tile>,
     entities: HashMap<u32, Entity>,
-    entity_id_counter: u32,
+    entity_id_counter: u32
 }
 
 impl Map {
-    pub fn new(width: u16, height: u16, value: &Tile, gen_type: MapType, level: i32) -> Self {
-        let mut tiles = Vec::with_capacity((width * height) as usize);
-        tiles.resize((width * height) as usize, value.clone());
+    pub fn new(width: u16, height: u16, value: &Tile) -> Self {
+        let tiles = vec![value.clone(); (width * height) as usize];
         Map {
             width, height, tiles,
             entities: HashMap::new(),
-            unlinked_warps: HashMap::new(),
-            level,
-            gen_type,
+            warps: HashMap::new(),
+            free_warps_to_next: HashSet::new(),
             entity_id_counter: 0
         }
     }
 
     pub fn get_width(&self) -> u16 { self.width }
     pub fn get_height(&self) -> u16 { self.height }
-    pub fn get_type(&self) -> MapType { self.gen_type }
-    pub fn get_level(&self) -> i32 { self.level }
+    pub fn get_size(&self) -> (u16, u16) { (self.width, self.height) }
 
     pub fn tile_at(&self, x: u16, y: u16) -> &Tile {
         &self.tiles[(y * self.width + x) as usize]
@@ -46,54 +43,33 @@ impl Map {
     pub fn fill<F>(&mut self, f: F) where F: Fn(u16, u16) -> Tile {
         for x in 0..self.width {
             for y in 0..self.height {
-                let tile = f(x, y);
-                if let Some(level_delta) = tile.get_level_delta() {
-                    self.add_unlinked_warp(Vec2u::new(x, y), self.level + level_delta);
-                    dbg!("Registered unlinked warp");
-                }
-                *self.tile_at_mut(x, y) = tile;
+                *self.tile_at_mut(x, y) = f(x, y);
             }
         }
+    }
+
+    pub fn warp_at(&self, x: u16, y: u16) -> Option<&TargetInfo> {
+        self.warps.get(&Vec2u::new(x, y))
+    }
+
+    pub fn add_warp(&mut self, x: u16, y: u16, target_info: TargetInfo) {
+        self.warps.insert(Vec2u::new(x, y), target_info);
+    }
+
+    pub fn add_free_warp(&mut self, x: u16, y: u16) {
+        self.free_warps_to_next.insert(Vec2::new(x, y));
+    }
+
+    pub fn link_free_warp_to_next(&mut self, x: u16, y: u16, target_info: TargetInfo) {
+        let pos = Vec2::new(x, y);
+        self.free_warps_to_next.remove(&pos);
+        self.warps.insert(pos, target_info);
     }
 
     fn next_entity_id(&mut self) -> u32 {
         let id = self.entity_id_counter;
         self.entity_id_counter += 1;
         id
-    }
-    
-    pub fn get_ids(&self) -> Vec<u32> {
-        let count = self.entities.len();
-        let mut keys: Vec<u32> = Vec::with_capacity(count);
-
-        for key in self.entities.keys() {
-            keys.push(*key);
-        };
-
-        keys
-    }
-
-    pub fn add_unlinked_warp(&mut self, pos: Vec2u, level: i32) {
-        self.unlinked_warps.insert(pos, level);
-    }
-
-    pub fn link_warp(&mut self, target_level: i32, source_map_id: u32, source_pos: Vec2u) -> Result<Vec2u, String> {
-        let mut found_pos: Option<Vec2u> = None;
-        for (pos, _) in self.unlinked_warps.iter().filter(|(_, level)| {**level == target_level}) {
-            found_pos = Some(pos.clone());
-            break;
-        }
-        if let Some(pos) = found_pos {
-            self.unlinked_warps.remove(&pos);
-            let tile = self.tile_at_mut(pos.x, pos.y);
-            tile.set_target_info(Some(TargetInfo {
-                map_id: source_map_id,
-                target_pos: source_pos
-            }));
-            Ok(pos)
-        } else {
-            Err("No free warps found".to_string())
-        }
     }
 
     pub fn add_entity(&mut self, data: EntityData, pos: Vec2u) -> u32 {
@@ -102,28 +78,16 @@ impl Map {
         return id;
     }
 
-    pub fn get_entity(&self, id: u32) -> Result<&Entity, String> {
-        if let Some(entity) = self.entities.get(&id) {
-            return Ok(entity);
-        }
-
-        return Err("Could not find entity".to_string());
+    pub fn get_entity(&self, id: u32) -> Option<&Entity> {
+        self.entities.get(&id)
     }
 
-    pub fn get_entity_mut(&mut self, id: u32) -> Result<&mut Entity, String> {
-        if let Some(entity) = self.entities.get_mut(&id) {
-            return Ok(entity);
-        }
-
-        return Err("Could not find entity".to_string());
+    pub fn get_entity_mut(&mut self, id: u32) -> Option<&mut Entity> {
+        self.entities.get_mut(&id)
     }
 
-    pub fn remove_entity(&mut self, id: u32) -> Result<EntityData, String> {
-        if let Some(entity) = self.entities.remove(&id) {
-            return Ok(entity.data);
-        } else {
-            return Err("Could not find entity".to_string());
-        }
+    pub fn remove_entity(&mut self, id: u32) -> Option<EntityData> {
+        self.entities.remove(&id).map(|e| e.data)
     }
 
     pub fn entities_by_pos(&self) -> HashMap<Vec2u, &Entity> {
@@ -168,7 +132,8 @@ impl Map {
                         Some(e) => e,
                         None => continue,
                     };
-                    if let Some(_) = self.tile_at(entity.pos.x, entity.pos.y).get_level_delta() {
+                    
+                    if self.warps.contains_key(&entity.pos) {
                         world_actions.push(WorldAction::EntityUseWarp { entity_id: id });
                     }
                 }

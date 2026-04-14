@@ -37,7 +37,7 @@ pub enum EntityData {
 
 impl Entity {
     pub fn new(id: u32, pos: Vec2u, data: EntityData) -> Entity {
-        return Entity { id, pos, data }
+        Entity { id, pos, data }
     }
 
     pub fn repr(&self) -> StyledContent<&str> {

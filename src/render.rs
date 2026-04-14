@@ -18,13 +18,13 @@ fn draw_map(stdout: &mut Stdout, map: &Map, cam_pos: Vec2u, render_width: u16) -
     let map_height = map.get_height();
 
     let entities = map.entities_by_pos();
-    
+
     queue!(
         stdout,
         cursor::MoveTo(0, 0),
         ResetColor
     )?;
-    
+
     let half_w = cam_width / 2;
     let half_h = cam_height / 2;
     let start_x = (cam_pos.x.saturating_sub(half_w)).min(map_width.saturating_sub(cam_width));
@@ -47,7 +47,6 @@ fn draw_map(stdout: &mut Stdout, map: &Map, cam_pos: Vec2u, render_width: u16) -
         }
         queue!(
             stdout,
-            terminal::Clear(ClearType::UntilNewLine),
             Print("\n\r"),
         )?;
     }
@@ -61,6 +60,14 @@ fn draw_map(stdout: &mut Stdout, map: &Map, cam_pos: Vec2u, render_width: u16) -
 }
 
 pub fn render(app: &mut App<GameData>) -> io::Result<()> {
+    if app.data.should_clear_screen {
+        app.data.should_clear_screen = false;
+        queue!(
+            app.stdout,
+            terminal::Clear(ClearType::All)
+        )?;
+    }
+
     let info_x = terminal::size().unwrap().0 * 3 / 4;
     draw_map(
         &mut app.stdout,
@@ -74,10 +81,13 @@ pub fn render(app: &mut App<GameData>) -> io::Result<()> {
         app.stdout,
         MoveTo(info_x + 1, 1),
         Print(format!("MapID: {}", app.data.current_map_id)),
+        terminal::Clear(ClearType::UntilNewLine),
         MoveTo(info_x + 1, 2),
-        Print(format!("Level: {}", app.data.current_map().get_level())),
+        Print(format!("Level: ???")),
+        terminal::Clear(ClearType::UntilNewLine),
         MoveTo(info_x + 1, 3),
-        Print(format!("PlayerPos: {:?}", player.pos))
+        Print(format!("PlayerPos: {}, {}", player.pos.x, player.pos.y)),
+        terminal::Clear(ClearType::UntilNewLine),
     )?;
 
     app.stdout.flush()

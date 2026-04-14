@@ -1,14 +1,13 @@
 use crossterm::style::{Color, StyledContent, Stylize};
 
-use crate::world::world::TargetInfo;
-
 #[derive(Clone)]
 pub enum Tile {
-    Null,
-    
     Floor,
     Wall,
     Vent,
+
+    Grass,
+    Tree,
 
     RockFloor,
     RockWall,
@@ -17,9 +16,9 @@ pub enum Tile {
     Lava,
 
     Door(bool),
-    Tunnel(Option<TargetInfo>),
-    StairUp(Option<TargetInfo>),
-    StairDown(Option<TargetInfo>),
+    Tunnel,
+    StairUp,
+    StairDown,
 }
 
 impl Tile {
@@ -29,7 +28,10 @@ impl Tile {
             Self::Wall => "##".on(Color::AnsiValue(8)),
             Self::Vent => "=̅=̅".bold(),
 
-            Self::RockFloor => " ,".with(Color::AnsiValue(130)),
+            Self::Grass => " ,".with(Color::AnsiValue(70)),
+            Self::Tree => " 7".with(Color::AnsiValue(2)),
+
+            Self::RockFloor => ",'".with(Color::AnsiValue(178)),
             Self::RockWall => "//".on(Color::AnsiValue(130)),
 
             Self::Water => ",~".on(Color::AnsiValue(39)),
@@ -39,18 +41,17 @@ impl Tile {
                 let v = if *is_open {"|+"} else {"||"};
                 v.bold()
             },
-            Self::StairDown(_) => ">>".on(Color::AnsiValue(233)).bold(),
-            Self::StairUp(_) => "<<".on(Color::AnsiValue(233)).bold(),
-            Self::Tunnel(_) => "><".on(Color::AnsiValue(233)).bold(),
-            Self::Null => "^@".cyan().on_dark_red()
+            Self::StairDown => ">>".on(Color::AnsiValue(233)).bold(),
+            Self::StairUp => "<<".on(Color::AnsiValue(233)).bold(),
+            Self::Tunnel => "><".on(Color::AnsiValue(233)).bold()
         }
     }
 
     pub fn is_passable(&self) -> bool {
         match self {
-            Self::Null => false,
             Self::Wall => false,
             Self::RockWall => false,
+            Self::Tree => false,
             Self::Water => false,
             Self::Lava => false,
             Self::Door(is_open) => *is_open,
@@ -58,38 +59,20 @@ impl Tile {
         }
     }
 
-    pub fn get_target_info(&self) -> Result<Option<TargetInfo>, String> {
-        match self {
-            Tile::Tunnel(info) |
-            Tile::StairDown(info) |
-            Tile::StairUp(info) => Ok(info.clone()), // Option<TargetInfo>
-            _ => Err("Not a warp tile".to_string())
-        }
-    }
-
-    pub fn set_target_info(&mut self, target_info: Option<TargetInfo>) {
-        match self {
-            Tile::Tunnel(opt) |
-            Tile::StairDown(opt) |
-            Tile::StairUp(opt) => *opt = target_info,
-            _ => (),
-        }
-    }
-
     pub fn get_level_delta(&self) -> Option<i32> {
         match self {
-            Self::Tunnel(_) => Some(0),
-            Self::StairDown(_) => Some(1),
-            Self::StairUp(_) => Some(-1),
+            Self::Tunnel => Some(0),
+            Self::StairDown => Some(1),
+            Self::StairUp => Some(-1),
             _ => None
         }
     }
 
-    pub fn warp_from_direction(direction: i32, target_info: Option<TargetInfo>) -> Tile {
+    pub fn warp_from_direction(direction: i32) -> Tile {
         match direction {
-            -1 => Self::StairUp(target_info),
-            1 => Self::StairDown(target_info),
-            _ => Self::Tunnel(target_info)
+            -1 => Self::StairUp,
+            1 => Self::StairDown,
+            _ => Self::Tunnel
         }
     }
 }

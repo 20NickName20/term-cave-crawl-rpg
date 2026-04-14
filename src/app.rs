@@ -30,7 +30,6 @@ impl<T> App<T> {
                 self.exit();
             }
         }
-        
         event_handler(self, event)
     }
 
@@ -40,7 +39,7 @@ impl<T> App<T> {
             crossterm::terminal::EnterAlternateScreen,
             cursor::Hide
         ).unwrap();
-        crossterm::terminal::enable_raw_mode().unwrap();
+        crossterm::terminal::enable_raw_mode().expect("Unable to enable raw mode");
 
         let mut result: Result<(), String> = Ok(());
 
@@ -77,22 +76,4 @@ impl<T> App<T> {
 
         result
     }
-}
-
-pub fn log(msg: String) -> Result<(), String> {
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/something.log")
-        .map_err(|e| format!("failed to open log file: {}", e))?;
-
-    let now = std::time::SystemTime::now();
-    let ts = match now.duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => d.as_secs(),
-        Err(_) => 0,
-    };
-
-    let line = format!("[{}] {}\n", ts, msg);
-    std::io::Write::write_all(&mut file, line.as_bytes()).map_err(|e| format!("failed to write log: {}", e))?;
-    Ok(())
 }

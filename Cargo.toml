@@ -7,3 +7,4 @@ authors = ["20_NickName_20"]
 [dependencies]
 crossterm = "0.29.0"
 rand = "0.10.0"
+time-format = "1.2.2"
